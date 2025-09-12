@@ -24,9 +24,15 @@ jobs:
           VERSION="${{ github.event.client_payload.version }}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MAJOR=$(echo "$VERSION" | cut -d. -f1 | sed 's/v//')
           MINOR=$(echo "$VERSION" | cut -d. -f2)
-          NEXT_MINOR="$MAJOR.$((MINOR+1)).0"
+          PATCH=$(echo "$VERSION" | cut -d. -f3 | cut -d'-' -f1)
+
+          if [[ "$VERSION" == *"-"* ]]; then
+            NEXT_MINOR="v$MAJOR.$MINOR.$PATCH"
+          else
+            NEXT_MINOR="v$MAJOR.$((MINOR+1)).0"
+          fi
           echo "next_version=$NEXT_MINOR" >> $GITHUB_OUTPUT
 
       - name: Create update branch
