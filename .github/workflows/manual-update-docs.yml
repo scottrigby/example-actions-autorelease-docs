@@ -1,0 +1,24 @@
+name: Manual Update Docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update docs for (e.g., v3.20.0)'
+        required: true
+        type: string
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger docs update workflow
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          repository: ${{ github.repository }}
+          event-type: version-released
+          client-payload: |
+            {
+              "version": "${{ inputs.version }}"
+            }
