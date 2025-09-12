@@ -3,7 +3,7 @@
 ## Current Releases
 
 **v3 Series (Stable)**
-- Current: v3.20.0
+- Current: v3.20.1
 - Next: v3.21.0 (December 12, 2025)
 
 **v4 Series (Latest)**  

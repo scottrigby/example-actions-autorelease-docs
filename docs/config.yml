@@ -1,5 +1,5 @@
 site:
   name: "Example Project"
-  current_version: "v3.20.0"
+  current_version: "v3.20.1"
   next_minor_v3: "v3.21.0"
   next_minor_v4: "v4.1.0"
