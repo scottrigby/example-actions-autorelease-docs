@@ -65,13 +65,14 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           NEXT="${{ steps.version.outputs.next_version }}"
+          NEXT_DATE=$(date -d "+3 months" +%B\ %d,\ %Y)
 
           if [[ "$VERSION" == v3* ]]; then
             sed -i "s/- Current: v3\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
-            sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+/- Next: $NEXT/" docs/index.md
+            sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ (.*/- Next: $NEXT ($NEXT_DATE)/" docs/index.md
           else
             sed -i "s/- Current: v4\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
-            sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+/- Next: $NEXT/" docs/index.md
+            sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ (.*/- Next: $NEXT ($NEXT_DATE)/" docs/index.md
           fi
 
       - name: Commit and create PR
