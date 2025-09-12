@@ -1,0 +1,5 @@
+site:
+  name: "Example Project"
+  current_version: "v3.1.0"
+  next_minor_v3: "v3.2.0"
+  next_minor_v4: "v4.1.0"

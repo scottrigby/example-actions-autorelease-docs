@@ -1,0 +1,83 @@
+name: Update Version
+
+on:
+  repository_dispatch:
+    types: [version-released]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION="${{ github.event.client_payload.version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          NEXT_MINOR="$MAJOR.$((MINOR+1)).0"
+          echo "next_version=$NEXT_MINOR" >> $GITHUB_OUTPUT
+
+      - name: Create update branch
+        run: |
+          BRANCH="update-${{ steps.version.outputs.version }}"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> $GITHUB_ENV
+
+      - name: Update config
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NEXT="${{ steps.version.outputs.next_version }}"
+
+          sed -i "s/current_version: .*/current_version: \"$VERSION\"/" docs/config.yml
+
+          if [[ "$VERSION" == v3* ]]; then
+            sed -i "s/next_minor_v3: .*/next_minor_v3: \"$NEXT\"/" docs/config.yml
+          else
+            sed -i "s/next_minor_v4: .*/next_minor_v4: \"$NEXT\"/" docs/config.yml
+          fi
+
+      - name: Add to versions table
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+
+          sed -i "/| Version | Release Date | Notes |/a | $VERSION | $DATE | Latest release |" docs/versions.md
+
+      - name: Update home page
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NEXT="${{ steps.version.outputs.next_version }}"
+
+          if [[ "$VERSION" == v3* ]]; then
+            sed -i "s/- Current: v3\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
+            sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+/- Next: $NEXT/" docs/index.md
+          else
+            sed -i "s/- Current: v4\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
+            sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+/- Next: $NEXT/" docs/index.md
+          fi
+
+      - name: Commit and create PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add .
+          git commit -s -m "Update docs for ${{ steps.version.outputs.version }}"
+          git push origin "${{ env.branch }}"
+
+          gh pr create \
+            --title "Update docs for ${{ steps.version.outputs.version }}" \
+            --body "Automated documentation update for release ${{ steps.version.outputs.version }}" \
+            --base main \
+            --head "${{ env.branch }}"
