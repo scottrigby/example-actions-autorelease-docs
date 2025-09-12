@@ -38,6 +38,13 @@ jobs:
       - name: Create update branch
         run: |
           BRANCH="update-${{ steps.version.outputs.version }}"
+
+          # Delete branch if it already exists (from previous failed runs)
+          if git show-ref --verify --quiet refs/remotes/origin/"$BRANCH"; then
+            echo "Deleting existing branch $BRANCH"
+            git push origin --delete "$BRANCH"
+          fi
+
           git checkout -b "$BRANCH"
           echo "branch=$BRANCH" >> $GITHUB_ENV
 
