@@ -77,7 +77,7 @@ jobs:
 
       - name: Commit and create PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           git add .
           git commit -s -m "Update docs for ${{ steps.version.outputs.version }}"
