@@ -65,8 +65,19 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
+          MAJOR=$(echo "$VERSION" | cut -d. -f1 | sed 's/v//')
 
-          sed -i "/| Version | Release Date | Notes |/a | $VERSION | $DATE | Latest release |" docs/versions.md
+          if [[ "$MAJOR" == "4" ]]; then
+            # Insert after header for v4 versions (top of table)
+            sed -i "/|---|---|/a | $VERSION | $DATE |" docs/versions.md
+          else
+            # Insert before first v3 version or at end if no v3 versions exist
+            if grep -q "| v3\." docs/versions.md; then
+              sed -i "/| v3\./i | $VERSION | $DATE |" docs/versions.md
+            else
+              echo "| $VERSION | $DATE |" >> docs/versions.md
+            fi
+          fi
 
       - name: Update home page
         run: |
