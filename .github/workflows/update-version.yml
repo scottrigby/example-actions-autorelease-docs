@@ -39,9 +39,9 @@ jobs:
         run: |
           BRANCH="update-${{ steps.version.outputs.version }}"
 
-          # Delete branch if it already exists (from previous failed runs)
+          git fetch origin
           if git show-ref --verify --quiet refs/remotes/origin/"$BRANCH"; then
-            echo "Deleting existing branch $BRANCH"
+            echo "Deleting existing remote branch $BRANCH"
             git push origin --delete "$BRANCH"
           fi
 
