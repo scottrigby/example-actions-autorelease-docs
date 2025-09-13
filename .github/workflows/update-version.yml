@@ -57,7 +57,7 @@ jobs:
           PATCH=$(echo "$VERSION" | cut -d. -f3 | cut -d'-' -f1)
 
           if [[ "$VERSION" == *"-"* ]]; then
-            # Pre-release: update pre_release field, clear current if this is the first release
+            # Pre-release: update pre_release field only
             if [[ "$MAJOR" == "3" ]]; then
               sed -i "s/v3_pre_release: .*/v3_pre_release: \"$VERSION\"/" docs/config.yml
             else
@@ -68,16 +68,20 @@ jobs:
             if [[ "$MAJOR" == "3" ]]; then
               sed -i "s/v3_current: .*/v3_current: \"$VERSION\"/" docs/config.yml
               sed -i "s/v3_pre_release: .*/v3_pre_release: null/" docs/config.yml
-              # Only update next_minor for minor releases (not patches)
+              # Only update next version and date for minor releases (not patches)
               if [[ "$PATCH" == "0" ]]; then
-                sed -i "s/v3_next_minor: .*/v3_next_minor: \"$NEXT\"/" docs/config.yml
+                NEXT_DATE=$(date -d "+4 months" +%Y-%m-%d)
+                sed -i "s/v3_next: .*/v3_next: \"$NEXT\"/" docs/config.yml
+                sed -i "s/v3_next_date: .*/v3_next_date: $NEXT_DATE/" docs/config.yml
               fi
             else
               sed -i "s/v4_current: .*/v4_current: \"$VERSION\"/" docs/config.yml
               sed -i "s/v4_pre_release: .*/v4_pre_release: null/" docs/config.yml
-              # Only update next_minor for minor releases (not patches)
+              # Only update next version and date for minor releases (not patches)
               if [[ "$PATCH" == "0" ]]; then
-                sed -i "s/v4_next_minor: .*/v4_next_minor: \"$NEXT\"/" docs/config.yml
+                NEXT_DATE=$(date -d "+4 months" +%Y-%m-%d)
+                sed -i "s/v4_next: .*/v4_next: \"$NEXT\"/" docs/config.yml
+                sed -i "s/v4_next_date: .*/v4_next_date: $NEXT_DATE/" docs/config.yml
               fi
             fi
           fi
@@ -100,40 +104,50 @@ jobs:
             fi
           fi
 
-      - name: Update home page
+      - name: Install yq
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          NEXT="${{ steps.version.outputs.next_version }}"
-          MAJOR=$(echo "$VERSION" | cut -d. -f1 | sed 's/v//')
-          MINOR=$(echo "$VERSION" | cut -d. -f2)
-          PATCH=$(echo "$VERSION" | cut -d. -f3 | cut -d'-' -f1)
+          sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
 
-          if [[ "$VERSION" == *"-"* ]]; then
-            # Pre-release: update pre-release line, no date for next minor
-            if [[ "$MAJOR" == "3" ]]; then
-              sed -i "s/- Pre-release: v3\.[0-9]\+\.[0-9]\+.*/- Pre-release: $VERSION/" docs/index.md
-              sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ .*/- Next: $NEXT/" docs/index.md
-            else
-              sed -i "s/- Pre-release: v4\.[0-9]\+\.[0-9]\+.*/- Pre-release: $VERSION/" docs/index.md
-              sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ .*/- Next: $NEXT/" docs/index.md
-            fi
+      - name: Update home page from config
+        run: |
+          # Read values from config.yml and update index.md accordingly
+          V3_CURRENT=$(yq '.site.v3_current' docs/config.yml)
+          V3_PRE=$(yq '.site.v3_pre_release' docs/config.yml)
+          V3_NEXT=$(yq '.site.v3_next' docs/config.yml)
+          V3_DATE=$(yq '.site.v3_next_date' docs/config.yml)
+
+          V4_CURRENT=$(yq '.site.v4_current' docs/config.yml)
+          V4_PRE=$(yq '.site.v4_pre_release' docs/config.yml)
+          V4_NEXT=$(yq '.site.v4_next' docs/config.yml)
+          V4_DATE=$(yq '.site.v4_next_date' docs/config.yml)
+
+          # Update v3 section
+          if [[ "$V3_CURRENT" != "null" ]]; then
+            sed -i "s/- Current: v3\.[0-9]\+\.[0-9]\+/- Current: $V3_CURRENT/" docs/index.md
+          fi
+          if [[ "$V3_PRE" != "null" ]]; then
+            sed -i "s/- Pre-release: v3\.[0-9]\+\.[0-9]\+.*/- Pre-release: $V3_PRE/" docs/index.md
+          fi
+          if [[ "$V3_DATE" != "null" ]]; then
+            V3_DISPLAY_DATE=$(date -d "$V3_DATE" +%B\ %d,\ %Y)
+            sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ .*/- Next: $V3_NEXT ($V3_DISPLAY_DATE)/" docs/index.md
           else
-            # Stable release: update current line
-            if [[ "$MAJOR" == "3" ]]; then
-              sed -i "s/- Current: v3\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
-              # Only update next version and date for minor releases (not patches)
-              if [[ "$PATCH" == "0" ]]; then
-                NEXT_DATE=$(date -d "+4 months" +%B\ %d,\ %Y)
-                sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ .*/- Next: $NEXT ($NEXT_DATE)/" docs/index.md
-              fi
-            else
-              sed -i "s/- Current: v4\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
-              # Only update next version and date for minor releases (not patches)
-              if [[ "$PATCH" == "0" ]]; then
-                NEXT_DATE=$(date -d "+4 months" +%B\ %d,\ %Y)
-                sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ .*/- Next: $NEXT ($NEXT_DATE)/" docs/index.md
-              fi
-            fi
+            sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ .*/- Next: $V3_NEXT/" docs/index.md
+          fi
+
+          # Update v4 section
+          if [[ "$V4_CURRENT" != "null" ]]; then
+            sed -i "s/- Current: v4\.[0-9]\+\.[0-9]\+/- Current: $V4_CURRENT/" docs/index.md
+          fi
+          if [[ "$V4_PRE" != "null" ]]; then
+            sed -i "s/- Pre-release: v4\.[0-9]\+\.[0-9]\+.*/- Pre-release: $V4_PRE/" docs/index.md
+          fi
+          if [[ "$V4_DATE" != "null" ]]; then
+            V4_DISPLAY_DATE=$(date -d "$V4_DATE" +%B\ %d,\ %Y)
+            sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ .*/- Next: $V4_NEXT ($V4_DISPLAY_DATE)/" docs/index.md
+          else
+            sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ .*/- Next: $V4_NEXT/" docs/index.md
           fi
 
       - name: Commit and create PR
