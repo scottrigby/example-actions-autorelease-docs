@@ -7,7 +7,7 @@
 - Next: v3.21.0 (December 12, 2025)
 
 **v4 Series (Latest)**
-- Pre-release: v4.0.0-alpha.1
+- Pre-release: v4.0.0-alpha.2
 - Next: v4.0.0
 
 ## Quick Start
