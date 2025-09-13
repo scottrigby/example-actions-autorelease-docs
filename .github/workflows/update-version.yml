@@ -52,13 +52,28 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           NEXT="${{ steps.version.outputs.next_version }}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1 | sed 's/v//')
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3 | cut -d'-' -f1)
 
-          sed -i "s/current_version: .*/current_version: \"$VERSION\"/" docs/config.yml
-
-          if [[ "$VERSION" == v3* ]]; then
-            sed -i "s/next_minor_v3: .*/next_minor_v3: \"$NEXT\"/" docs/config.yml
+          if [[ "$VERSION" == *"-"* ]]; then
+            # Pre-release: update pre_release field, clear current if this is the first release
+            if [[ "$MAJOR" == "3" ]]; then
+              sed -i "s/v3_pre_release: .*/v3_pre_release: \"$VERSION\"/" docs/config.yml
+            else
+              sed -i "s/v4_pre_release: .*/v4_pre_release: \"$VERSION\"/" docs/config.yml
+            fi
           else
-            sed -i "s/next_minor_v4: .*/next_minor_v4: \"$NEXT\"/" docs/config.yml
+            # Stable release: update current field, clear pre_release, update next_minor
+            if [[ "$MAJOR" == "3" ]]; then
+              sed -i "s/v3_current: .*/v3_current: \"$VERSION\"/" docs/config.yml
+              sed -i "s/v3_pre_release: .*/v3_pre_release: null/" docs/config.yml
+              sed -i "s/v3_next_minor: .*/v3_next_minor: \"$NEXT\"/" docs/config.yml
+            else
+              sed -i "s/v4_current: .*/v4_current: \"$VERSION\"/" docs/config.yml
+              sed -i "s/v4_pre_release: .*/v4_pre_release: null/" docs/config.yml
+              sed -i "s/v4_next_minor: .*/v4_next_minor: \"$NEXT\"/" docs/config.yml
+            fi
           fi
 
       - name: Add to versions table
@@ -83,14 +98,36 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           NEXT="${{ steps.version.outputs.next_version }}"
-          NEXT_DATE=$(date -d "+3 months" +%B\ %d,\ %Y)
+          MAJOR=$(echo "$VERSION" | cut -d. -f1 | sed 's/v//')
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3 | cut -d'-' -f1)
 
-          if [[ "$VERSION" == v3* ]]; then
-            sed -i "s/- Current: v3\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
-            sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ (.*/- Next: $NEXT ($NEXT_DATE)/" docs/index.md
+          if [[ "$VERSION" == *"-"* ]]; then
+            # Pre-release: update pre-release line, no date for next minor
+            if [[ "$MAJOR" == "3" ]]; then
+              sed -i "s/- Pre-release: v3\.[0-9]\+\.[0-9]\+.*/- Pre-release: $VERSION/" docs/index.md
+              sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ .*/- Next: $NEXT/" docs/index.md
+            else
+              sed -i "s/- Pre-release: v4\.[0-9]\+\.[0-9]\+.*/- Pre-release: $VERSION/" docs/index.md
+              sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ .*/- Next: $NEXT/" docs/index.md
+            fi
           else
-            sed -i "s/- Current: v4\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
-            sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ (.*/- Next: $NEXT ($NEXT_DATE)/" docs/index.md
+            # Stable release: update current line, add date for next minor (4 months for minor, 1 month for patch)
+            if [[ "$MINOR" == "0" && "$PATCH" == "0" ]]; then
+              # Major release: next minor is 4 months away
+              NEXT_DATE=$(date -d "+4 months" +%B\ %d,\ %Y)
+            else
+              # Patch release: next minor is 4 months away, next patch is 1 month away
+              NEXT_DATE=$(date -d "+4 months" +%B\ %d,\ %Y)
+            fi
+
+            if [[ "$MAJOR" == "3" ]]; then
+              sed -i "s/- Current: v3\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
+              sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ .*/- Next: $NEXT ($NEXT_DATE)/" docs/index.md
+            else
+              sed -i "s/- Current: v4\.[0-9]\+\.[0-9]\+/- Current: $VERSION/" docs/index.md
+              sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ .*/- Next: $NEXT ($NEXT_DATE)/" docs/index.md
+            fi
           fi
 
       - name: Commit and create PR
