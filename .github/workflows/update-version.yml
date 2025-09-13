@@ -109,9 +109,9 @@ jobs:
           sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-      - name: Update home page from config
+      - name: Regenerate home page from config
         run: |
-          # Read values from config.yml and update index.md accordingly
+          # Read values from config.yml using yq
           V3_CURRENT=$(yq '.site.v3_current' docs/config.yml)
           V3_PRE=$(yq '.site.v3_pre_release' docs/config.yml)
           V3_NEXT=$(yq '.site.v3_next' docs/config.yml)
@@ -122,33 +122,55 @@ jobs:
           V4_NEXT=$(yq '.site.v4_next' docs/config.yml)
           V4_DATE=$(yq '.site.v4_next_date' docs/config.yml)
 
-          # Update v3 section
-          if [[ "$V3_CURRENT" != "null" ]]; then
-            sed -i "s/- Current: v3\.[0-9]\+\.[0-9]\+/- Current: $V3_CURRENT/" docs/index.md
+          # Build v3 section content
+          V3_CONTENT="**v3 Series (Stable)**"
+          if [[ "$V3_CURRENT" != "null" && -n "$V3_CURRENT" ]]; then
+            V3_CONTENT="$V3_CONTENT\n- Current: $V3_CURRENT"
           fi
-          if [[ "$V3_PRE" != "null" ]]; then
-            sed -i "s/- Pre-release: v3\.[0-9]\+\.[0-9]\+.*/- Pre-release: $V3_PRE/" docs/index.md
+          if [[ "$V3_PRE" != "null" && -n "$V3_PRE" ]]; then
+            V3_CONTENT="$V3_CONTENT\n- Pre-release: $V3_PRE"
           fi
-          if [[ "$V3_DATE" != "null" ]]; then
+          if [[ "$V3_DATE" != "null" && -n "$V3_DATE" ]]; then
             V3_DISPLAY_DATE=$(date -d "$V3_DATE" +%B\ %d,\ %Y)
-            sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ .*/- Next: $V3_NEXT ($V3_DISPLAY_DATE)/" docs/index.md
+            V3_CONTENT="$V3_CONTENT\n- Next: $V3_NEXT ($V3_DISPLAY_DATE)"
           else
-            sed -i "s/- Next: v3\.[0-9]\+\.[0-9]\+ .*/- Next: $V3_NEXT/" docs/index.md
+            V3_CONTENT="$V3_CONTENT\n- Next: $V3_NEXT"
           fi
 
-          # Update v4 section
-          if [[ "$V4_CURRENT" != "null" ]]; then
-            sed -i "s/- Current: v4\.[0-9]\+\.[0-9]\+/- Current: $V4_CURRENT/" docs/index.md
+          # Build v4 section content
+          V4_CONTENT="**v4 Series (Latest)**"
+          if [[ "$V4_CURRENT" != "null" && -n "$V4_CURRENT" ]]; then
+            V4_CONTENT="$V4_CONTENT\n- Current: $V4_CURRENT"
           fi
-          if [[ "$V4_PRE" != "null" ]]; then
-            sed -i "s/- Pre-release: v4\.[0-9]\+\.[0-9]\+.*/- Pre-release: $V4_PRE/" docs/index.md
+          if [[ "$V4_PRE" != "null" && -n "$V4_PRE" ]]; then
+            V4_CONTENT="$V4_CONTENT\n- Pre-release: $V4_PRE"
           fi
-          if [[ "$V4_DATE" != "null" ]]; then
+          if [[ "$V4_DATE" != "null" && -n "$V4_DATE" ]]; then
             V4_DISPLAY_DATE=$(date -d "$V4_DATE" +%B\ %d,\ %Y)
-            sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ .*/- Next: $V4_NEXT ($V4_DISPLAY_DATE)/" docs/index.md
+            V4_CONTENT="$V4_CONTENT\n- Next: $V4_NEXT ($V4_DISPLAY_DATE)"
           else
-            sed -i "s/- Next: v4\.[0-9]\+\.[0-9]\+ .*/- Next: $V4_NEXT/" docs/index.md
+            V4_CONTENT="$V4_CONTENT\n- Next: $V4_NEXT"
           fi
+
+          # Replace entire releases section and regenerate
+          cp docs/index.md docs/index.md.bak
+          awk '
+          BEGIN { in_releases=0 }
+          /^## Current Releases$/ {
+            print $0
+            print ""
+            print "'"$V3_CONTENT"'"
+            print ""
+            print "'"$V4_CONTENT"'"
+            in_releases=1
+            next
+          }
+          /^## Quick Start$/ && in_releases==1 {
+            print ""
+            in_releases=0
+          }
+          in_releases==0 { print }
+          ' docs/index.md.bak > docs/index.md
 
       - name: Commit and create PR
         env:
