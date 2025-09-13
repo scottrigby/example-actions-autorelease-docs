@@ -171,6 +171,7 @@ jobs:
           }
           in_releases==0 { print }
           ' docs/index.md.bak > docs/index.md
+          rm docs/index.md.bak
 
       - name: Commit and create PR
         env:
