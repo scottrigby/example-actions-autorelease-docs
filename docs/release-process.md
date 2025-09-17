@@ -4,9 +4,9 @@
 
 1. Go to source repo Actions tab
 2. Run "Prepare Release" workflow with target version
-3. Review and merge the generated PR
-4. Release is created automatically
-5. Review and merge docs update PR
+3. Draft release is created automatically
+4. Review and publish the draft release
+5. Documentation is automatically updated
 
 ## Manual Release (if CI fails)
 
