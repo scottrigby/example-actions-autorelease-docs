@@ -3,10 +3,10 @@
 ## Automated Release
 
 1. Go to source repo Actions tab
-2. Run "Create Release" workflow with target version
+2. Run "Release" workflow with target version
 3. Draft release is created automatically (single atomic operation)
 4. Review and publish the draft release
-5. Documentation is automatically updated via trigger-docs-update workflow
+5. Documentation is automatically updated via "Update docs" workflow
 
 ## Manual Release (if CI fails)
 
