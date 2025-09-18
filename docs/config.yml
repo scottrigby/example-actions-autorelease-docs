@@ -1,7 +1,7 @@
 site:
   name: "Example Project"
-  v3_current: "v3.20.1"
-  v3_pre_release: "v3.21.0-alpha.1"
+  v3_current: "v3.22.2"
+  v3_pre_release: null
   v3_next: "v3.21.0"
   v3_next_date: 2025-12-12
   v4_current: null
